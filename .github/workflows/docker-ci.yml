@@ -50,7 +50,7 @@ jobs:
       if: steps.check-changes.outputs.build == 'true'
       uses: docker/login-action@v3
       with:
-        username: ${{ secrets.DOCKERHUB_MANSI }}
+        username: ${{ secrets.DOCKERHUB_NAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
 
     
@@ -60,20 +60,20 @@ jobs:
       with:
         context: .
         file: ${{ matrix.dockerfile }}
-        tags: DOCKERHUB_MANSI/app:${{ matrix.tag }}
+        tags: dockerhub_mansi/app:${{ matrix.tag }}
         push: false
         
         
     - name: Push to Docker Hub
       if: steps.check-changes.outputs.build == 'true'
-      run: docker push DOCKERHUB_MANSI/app:${{ matrix.tag }}
+      run: docker push dockerhub_mansi/app:${{ matrix.tag }}
 
     
     - name: Scan with Trivy
       if: steps.check-changes.outputs.build == 'true'
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: DOCKERHUB_MANSI/app:${{ matrix.tag }}
+        image-ref: dockerhub_mansi/app:${{ matrix.tag }}
         format: sarif
         output: trivy-results.${{ matrix.tag }}.sarif
 
