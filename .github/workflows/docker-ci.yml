@@ -62,10 +62,8 @@ jobs:
         file: ${{ matrix.dockerfile }}
         tags: DOCKERHUB_MANSI/app:${{ matrix.tag }}
         push: false
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-    
+        
+        
     - name: Push to Docker Hub
       if: steps.check-changes.outputs.build == 'true'
       run: docker push DOCKERHUB_MANSI/app:${{ matrix.tag }}
