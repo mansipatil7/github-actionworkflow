@@ -1,0 +1,93 @@
+name: Build, Scan and Push Docker Images
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-scan-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - dockerfile: ./dockerfile.dev
+            tag: dev
+          - dockerfile: ./dockerfile.test
+            tag: test  
+          - dockerfile: ./dockerfile.prod
+            tag: prod
+    
+    steps:
+    
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 2
+
+    
+    - name: Check for Dockerfile changes
+      id: check-changes
+      run: |
+        if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          echo "build=true" >> $GITHUB_OUTPUT
+        else
+          if git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -q "${{ matrix.dockerfile }}"; then
+            echo "build=true" >> $GITHUB_OUTPUT
+          else
+            echo "build=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+    
+    - name: Debug info
+      run: |
+        echo "Dockerfile: ${{ matrix.dockerfile }}"
+        echo "Tag: ${{ matrix.tag }}"
+        echo "Should build: ${{ steps.check-changes.outputs.build }}"
+
+    
+    - name: Login to Docker Hub
+      if: steps.check-changes.outputs.build == 'true'
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+    
+    - name: Build Docker image
+      if: steps.check-changes.outputs.build == 'true'
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ${{ matrix.dockerfile }}
+        tags: DOCKERHUB_MANSI/app:${{ matrix.tag }}
+        push: false
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    
+    - name: Push to Docker Hub
+      if: steps.check-changes.outputs.build == 'true'
+      run: docker push DOCKERHUB_MANSI/app:${{ matrix.tag }}
+
+    
+    - name: Scan with Trivy
+      if: steps.check-changes.outputs.build == 'true'
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: DOCKERHUB_MANSI/app:${{ matrix.tag }}
+        format: sarif
+        output: trivy-results.${{ matrix.tag }}.sarif
+
+    
+    - name: Upload Trivy scan results
+      if: steps.check-changes.outputs.build == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: trivy-results-${{ matrix.tag }}
+        path: trivy-results.${{ matrix.tag }}.sarif
+
+    
+    - name: Skip notification
+      if: steps.check-changes.outputs.build == 'false'
+      run: echo "Skipping build for ${{ matrix.dockerfile }} - no changes detected"
