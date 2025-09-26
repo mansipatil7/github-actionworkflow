@@ -67,6 +67,7 @@ jobs:
     - name: Push to Docker Hub
       if: steps.check-changes.outputs.build == 'true'
       run: docker push dockerhub_mansi/app:${{ matrix.tag }}
+    
 
     
     - name: Scan with Trivy
