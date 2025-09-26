@@ -10,11 +10,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - dockerfile: ./dockerfile.dev
+          - dockerfile: ./Dockerfile.dev
             tag: dev
-          - dockerfile: ./dockerfile.test
+          - dockerfile: ./Dockerfile.test
             tag: test  
-          - dockerfile: ./dockerfile.prod
+          - dockerfile: ./Dockerfile.prod
             tag: prod
     
     steps:
